@@ -2,12 +2,20 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { ArrowLeft, Loader2, AlertCircle, RefreshCw, Brain, Lightbulb, MessageSquare, Target, Trophy } from "lucide-react";
+import ScoreCard from "@/components/ScoreCard";
+
+// Helper to get score color class
+const getScoreColor = (score: number) => {
+  if (score >= 90) return "text-emerald-600";
+  if (score >= 75) return "text-blue-600";
+  if (score >= 60) return "text-amber-600";
+  return "text-red-500";
+};
 
 const Results = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
-
   // State management
   const [status, setStatus] = useState<'initializing' | 'polling' | 'completed' | 'error' | 'timeout'>('initializing');
   const [pollCount, setPollCount] = useState(0);
@@ -114,19 +122,73 @@ const Results = () => {
 
           {/* STATUS: Completed */}
           {status === 'completed' && results && (
-            <div className="bg-green-500/10 p-6 rounded-xl border border-green-500/20">
-              <div className="flex items-center gap-3 mb-3">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-                <p className="text-lg font-semibold text-foreground">
-                  Results Ready!
+            <div className="space-y-8">
+              {/* Final Score Hero Section */}
+              <div className="text-center py-8 bg-gradient-to-br from-primary/5 via-accent/10 to-secondary rounded-2xl border border-border/30">
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <Trophy className="w-6 h-6 text-primary" />
+                  <h2 className="text-2xl font-semibold text-foreground font-serif">
+                    Great work, {results.candidateName || 'Candidate'}!
+                  </h2>
+                </div>
+
+                {/* Large Score Display */}
+                <div className="inline-flex items-center justify-center w-40 h-40 rounded-full bg-card shadow-card border-4 border-primary/20 mb-4">
+                  <div className="text-center">
+                    <p className={`text-5xl font-bold ${getScoreColor(results.finalScore || 0)}`}>
+                      {results.finalScore || 0}
+                    </p>
+                    <p className="text-sm text-muted-foreground">out of 100</p>
+                  </div>
+                </div>
+
+                <p className="text-sm text-muted-foreground mt-4">
+                  {results.jobField || 'General'} Interview • {results.difficulty || 'Standard'} Difficulty
                 </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Status: {results.status}
-              </p>
-              <pre className="mt-4 p-4 bg-secondary/50 rounded-lg text-xs text-muted-foreground overflow-auto max-h-60">
-                {JSON.stringify(results, null, 2)}
-              </pre>
+
+              {/* Criteria Breakdown Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ScoreCard
+                  icon={Brain}
+                  title="Technical Knowledge"
+                  score={results.scores?.technicalKnowledge?.score || 0}
+                  comment={results.scores?.technicalKnowledge?.comment || "No feedback available"}
+                  accentColor="purple"
+                />
+                <ScoreCard
+                  icon={Lightbulb}
+                  title="Problem Solving"
+                  score={results.scores?.problemSolving?.score || 0}
+                  comment={results.scores?.problemSolving?.comment || "No feedback available"}
+                  accentColor="amber"
+                />
+                <ScoreCard
+                  icon={MessageSquare}
+                  title="Communication Skills"
+                  score={results.scores?.communicationSkills?.score || 0}
+                  comment={results.scores?.communicationSkills?.comment || "No feedback available"}
+                  accentColor="blue"
+                />
+                <ScoreCard
+                  icon={Target}
+                  title="Relevance & Depth"
+                  score={results.scores?.relevance?.score || 0}
+                  comment={results.scores?.relevance?.comment || "No feedback available"}
+                  accentColor="emerald"
+                />
+              </div>
+
+              {/* Start New Interview Button */}
+              <div className="text-center pt-4">
+                <Button
+                  onClick={() => navigate('/')}
+                  size="lg"
+                  className="px-8 py-6 text-lg font-semibold shadow-warm hover:shadow-lg transition-all"
+                >
+                  Start New Interview
+                </Button>
+              </div>
             </div>
           )}
 
