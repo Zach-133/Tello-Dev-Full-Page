@@ -127,14 +127,28 @@ const Interview = () => {
                 </p>
               </div>
               
-              <Button
-                variant="destructive"
-                onClick={handleEndInterview}
-                className="shrink-0"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                End Interview Early
-              </Button>
+              <div className="flex gap-3">
+                <Button
+                  variant="destructive"
+                  onClick={handleEndInterview}
+                  className="shrink-0"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  End Interview Early
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (state.sessionId) {
+                      navigate(`/results/${state.sessionId}`);
+                    } else {
+                      alert('No session ID found');
+                    }
+                  }}
+                  className="shrink-0"
+                >
+                  End Interview & View Results
+                </Button>
+              </div>
             </div>
           </Card>
 
