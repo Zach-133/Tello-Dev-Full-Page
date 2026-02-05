@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Briefcase, BarChart3, LogOut, AlertCircle } from "lucide-react";
+import { Clock, Briefcase, BarChart3, Mic, ArrowLeft } from "lucide-react";
+import { useConversation } from "@elevenlabs/react";
 
 interface InterviewState {
   sessionId: string;
@@ -12,89 +13,89 @@ interface InterviewState {
   difficulty: string;
 }
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'elevenlabs-convai': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
-        'agent-id'?: string;
-        'dynamic-variables'?: string;
-      }, HTMLElement>;
-    }
-  }
-}
-
 const Interview = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [widgetError, setWidgetError] = useState(false);
-  const [scriptLoaded, setScriptLoaded] = useState(false);
-  
+  const [isStarted, setIsStarted] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+
   const state = location.state as InterviewState | null;
 
-  // Load ElevenLabs script
-  useEffect(() => {
-    const existingScript = document.querySelector('script[src*="elevenlabs"]');
-    if (existingScript) {
-      setScriptLoaded(true);
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
-    script.async = true;
-    script.type = 'text/javascript';
-    
-    script.onload = () => {
-      setScriptLoaded(true);
-    };
-    
-    script.onerror = () => {
-      setWidgetError(true);
-    };
-    
-    document.head.appendChild(script);
-
-    return () => {
-      // Don't remove script on cleanup to prevent re-loading issues
-    };
-  }, []);
-
-  // Set dynamic variables after script loads
-  useEffect(() => {
-    if (!state) {
-      navigate('/', { replace: true });
-      return;
-    }
-
-    if (!scriptLoaded) return;
-
-    // Small delay to ensure widget is rendered
-    const timer = setTimeout(() => {
-      const widget = document.querySelector('elevenlabs-convai');
-      if (widget) {
-        const dynamicVars = {
-          user_name: state.name,
-          job_field: state.jobField,
-          difficulty: state.difficulty,
-          duration: state.duration.toString(),
-          session_id: state.sessionId
-        };
-        widget.setAttribute('dynamic-variables', JSON.stringify(dynamicVars));
-      } else {
-        setWidgetError(true);
+  // Initialize conversation hook
+  const conversation = useConversation({
+    onConnect: () => {
+      console.log('Connected to interviewer');
+      setIsConnecting(false);
+      setIsStarted(true);
+    },
+    onDisconnect: () => {
+      console.log('Interview ended - navigating to results');
+      if (state?.sessionId) {
+        navigate(`/results/${state.sessionId}`);
       }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [state, navigate, scriptLoaded]);
+    },
+    onError: (error) => {
+      console.error('Connection error:', error);
+      alert('Failed to connect. Please check your microphone permissions.');
+      setIsConnecting(false);
+    },
+  });
 
   // Redirect if no state
   if (!state) {
+    navigate('/', { replace: true });
     return null;
   }
 
-  const handleEndInterview = () => {
-    navigate('/');
+  const handleStartInterview = async () => {
+    if (!state?.sessionId) {
+      alert('No session found. Please start from the form.');
+      navigate('/');
+      return;
+    }
+
+    setIsConnecting(true);
+
+    try {
+      // Request microphone permission
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Start conversation with dynamic variables via overrides
+      // @ts-expect-error - dynamicVariables is supported by the SDK but types may be outdated
+      await conversation.startSession({
+        agentId: 'agent_2601kgh4x4ygfpatf3m2j4aav9yb',
+        dynamicVariables: {
+          user_name: state.name,
+          job_field: state.jobField,
+          difficulty: state.difficulty,
+          duration: String(state.duration),
+          session_id: state.sessionId
+        }
+      });
+
+      console.log('Session started with variables:', {
+        user_name: state.name,
+        job_field: state.jobField,
+        difficulty: state.difficulty,
+        duration: state.duration,
+        session_id: state.sessionId
+      });
+    } catch (error: any) {
+      console.error('Failed to start:', error);
+      setIsConnecting(false);
+
+      if (error.name === 'NotAllowedError') {
+        alert('Microphone access denied. Enable permissions and try again.');
+      } else {
+        alert('Failed to start interview: ' + error.message);
+      }
+    }
+  };
+
+  const handleEndEarly = async () => {
+    if (window.confirm('End interview early?')) {
+      await conversation.endSession();
+    }
   };
 
   return (
@@ -102,74 +103,114 @@ const Interview = () => {
       <div className="container mx-auto px-4 py-8 lg:py-12">
         <div className="max-w-4xl mx-auto space-y-8">
           {/* Header Card */}
-          <Card className="bg-card rounded-2xl p-6 shadow-card border border-border/50">
+          <Card className="bg-card rounded-2xl p-6 shadow-lg border border-border/50">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="space-y-1">
                 <h1 className="text-2xl lg:text-3xl font-bold text-foreground font-serif">
-                  Interview with {state.name}
+                  {isStarted ? 'Interview in Progress' : 'Ready to Start?'}
                 </h1>
                 <p className="text-muted-foreground flex items-center gap-2 flex-wrap">
                   <span className="inline-flex items-center gap-1">
                     <Clock className="w-4 h-4" />
-                    {state.duration} minute
+                    {state.duration}min
                   </span>
                   <span className="inline-flex items-center gap-1">
                     <Briefcase className="w-4 h-4" />
-                    {state.jobField} interview
+                    {state.jobField}
                   </span>
                   <span className="inline-flex items-center gap-1">
                     <BarChart3 className="w-4 h-4" />
-                    {state.difficulty} level
+                    {state.difficulty}
                   </span>
                 </p>
                 <p className="text-xs text-muted-foreground/70 font-mono">
                   Session: {state.sessionId}
                 </p>
               </div>
-              
-              <div className="flex gap-3">
-                <Button
-                  variant="destructive"
-                  onClick={handleEndInterview}
-                  className="shrink-0"
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  End Interview Early
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (state.sessionId) {
-                      navigate(`/results/${state.sessionId}`);
-                    } else {
-                      alert('No session ID found');
-                    }
-                  }}
-                  className="shrink-0"
-                >
-                  End Interview & View Results
-                </Button>
-              </div>
             </div>
           </Card>
 
-          {/* Widget Container */}
-          <Card className="bg-card rounded-2xl p-8 shadow-card border border-border/50 min-h-[400px] flex items-center justify-center">
-            {widgetError ? (
-              <div className="text-center space-y-4">
-                <AlertCircle className="w-12 h-12 text-destructive mx-auto" />
-                <p className="text-muted-foreground">
-                  Widget failed to load. Please refresh.
-                </p>
+          {/* Main Content */}
+          <Card className="bg-card rounded-2xl p-8 shadow-lg border border-border/50 min-h-[400px] flex items-center justify-center">
+            {/* Pre-start state */}
+            {!isStarted && !isConnecting && (
+              <div className="text-center space-y-6 max-w-md">
+                <div className="bg-muted/50 rounded-xl p-6 text-left">
+                  <h3 className="font-semibold text-foreground mb-3">Before You Begin:</h3>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li>✓ Microphone connected and working</li>
+                    <li>✓ Quiet space with minimal noise</li>
+                    <li>✓ Speak clearly at normal pace</li>
+                    <li>✓ You'll answer 2 questions</li>
+                  </ul>
+                </div>
+
                 <Button
-                  variant="outline"
-                  onClick={() => window.location.reload()}
+                  size="lg"
+                  onClick={handleStartInterview}
+                  className="w-full py-6 text-lg"
                 >
-                  Refresh Page
+                  <Mic className="w-5 h-5 mr-2" />
+                  Start Interview
                 </Button>
+
+                <button
+                  onClick={() => navigate('/')}
+                  className="text-muted-foreground hover:text-foreground text-sm inline-flex items-center gap-1"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to home
+                </button>
               </div>
-            ) : (
-              <div className="w-full flex justify-center">
-                <elevenlabs-convai agent-id="agent_2601kgh4x4ygfpatf3m2j4aav9yb" />
+            )}
+
+            {/* Connecting state */}
+            {isConnecting && (
+              <div className="text-center space-y-4">
+                <div className="relative w-20 h-20 mx-auto">
+                  <div className="absolute inset-0 rounded-full border-4 border-muted"></div>
+                  <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+                </div>
+                <h3 className="text-xl font-semibold text-foreground">Connecting...</h3>
+                <p className="text-muted-foreground">Preparing your interview</p>
+              </div>
+            )}
+
+            {/* Active interview state */}
+            {isStarted && (
+              <div className="text-center space-y-6 w-full max-w-md">
+                <div className="space-y-4">
+                  {/* Audio visualization placeholder */}
+                  <div className="flex items-center justify-center gap-1 h-16">
+                    {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                      <div
+                        key={i}
+                        className="w-2 bg-primary rounded-full animate-pulse"
+                        style={{
+                          height: `${Math.random() * 40 + 20}px`,
+                          animationDelay: `${i * 0.1}s`,
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full">
+                    <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                    Interview Active
+                  </div>
+
+                  <p className="text-muted-foreground">🎤 Speak clearly</p>
+                </div>
+
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground">
+                    💡 Tip: Take your time to think before answering
+                  </p>
+                </div>
+
+                <Button variant="destructive" onClick={handleEndEarly}>
+                  End Interview Early
+                </Button>
               </div>
             )}
           </Card>
