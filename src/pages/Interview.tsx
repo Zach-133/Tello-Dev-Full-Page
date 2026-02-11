@@ -60,15 +60,21 @@ const Interview = () => {
       // Request microphone permission
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Map difficulty levels to ElevenLabs voice IDs
+      // Map difficulty to voice ID
       const voiceMapping: Record<string, string> = {
-        'Beginner': 'MClEFoImJXBTgLwdLI5n',
+        'Beginner': 'dAlhI9qAHVIjXuVppzhW',
         'Intermediate': 'SSfU0eLfP3qeuR4j2bwD',
-        'Advanced': 'dAlhI9qAHVIjXuVppzhW'
+        'Advanced': 'kdmDKE6EkgrWrrykO9Qt'
       };
 
       const selectedVoiceId = voiceMapping[state.difficulty];
-      console.log(`Starting ${state.difficulty} interview with voice: ${selectedVoiceId}`);
+
+      console.log('Starting interview with difficulty:', state.difficulty);
+      console.log('Selected voice ID:', selectedVoiceId);
+
+      if (!selectedVoiceId) {
+        throw new Error(`No voice mapping found for difficulty: ${state.difficulty}`);
+      }
 
       await (conversation as any).startSession({
         agentId: 'agent_2601kgh4x4ygfpatf3m2j4aav9yb',
@@ -86,19 +92,15 @@ const Interview = () => {
         }
       });
 
-      console.log('Session started with variables:', {
-        user_name: state.name,
-        job_field: state.jobField,
-        difficulty: state.difficulty,
-        duration: state.duration,
-        session_id: state.sessionId
-      });
+      console.log('Interview session started successfully');
     } catch (error: any) {
-      console.error('Failed to start:', error);
+      console.error('Failed to start interview:', error);
       setIsConnecting(false);
 
-      if (error.name === 'NotAllowedError') {
-        alert('Microphone access denied. Enable permissions and try again.');
+      if (error.message && error.message.includes('voice')) {
+        alert('Voice configuration error. Please contact support with error: ' + error.message);
+      } else if (error.name === 'NotAllowedError') {
+        alert('Microphone access denied. Please enable microphone permissions and try again.');
       } else {
         alert('Failed to start interview: ' + error.message);
       }
