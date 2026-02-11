@@ -60,10 +60,23 @@ const Interview = () => {
       // Request microphone permission
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Start conversation with dynamic variables via overrides
-      // @ts-expect-error - dynamicVariables is supported by the SDK but types may be outdated
-      await conversation.startSession({
+      // Map difficulty levels to ElevenLabs voice IDs
+      const voiceMapping: Record<string, string> = {
+        'Beginner': 'MClEFoImJXBTgLwdLI5n',
+        'Intermediate': 'SSfU0eLfP3qeuR4j2bwD',
+        'Advanced': 'dAlhI9qAHVIjXuVppzhW'
+      };
+
+      const selectedVoiceId = voiceMapping[state.difficulty];
+      console.log(`Starting ${state.difficulty} interview with voice: ${selectedVoiceId}`);
+
+      await (conversation as any).startSession({
         agentId: 'agent_2601kgh4x4ygfpatf3m2j4aav9yb',
+        overrides: {
+          agent: {
+            voiceId: selectedVoiceId
+          } as any
+        },
         dynamicVariables: {
           user_name: state.name,
           job_field: state.jobField,
