@@ -112,30 +112,36 @@ const Interview = () => {
 
   return (
     <div className="min-h-screen gradient-hero">
-      <div className="container mx-auto px-4 py-8 lg:py-12">
-        <div className="max-w-4xl mx-auto space-y-8">
+      {/* Decorative background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/5 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-accent/40 blur-3xl" />
+      </div>
+
+      <div className="relative container mx-auto px-4 py-10 lg:py-16">
+        <div className="max-w-3xl mx-auto space-y-6">
           {/* Header Card */}
-          <Card className="bg-card rounded-2xl p-6 shadow-lg border border-border/50">
+          <Card className="bg-card/80 backdrop-blur-sm rounded-2xl p-6 shadow-card border border-border/30">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <h1 className="text-2xl lg:text-3xl font-bold text-foreground font-serif">
                   {isStarted ? 'Interview in Progress' : 'Ready to Start?'}
                 </h1>
-                <p className="text-muted-foreground flex items-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    {state.duration}min
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 bg-secondary/70 text-secondary-foreground px-3 py-1 rounded-full text-sm font-medium">
+                    <Clock className="w-3.5 h-3.5" />
+                    {state.duration} min
                   </span>
-                  <span className="inline-flex items-center gap-1">
-                    <Briefcase className="w-4 h-4" />
+                  <span className="inline-flex items-center gap-1.5 bg-secondary/70 text-secondary-foreground px-3 py-1 rounded-full text-sm font-medium">
+                    <Briefcase className="w-3.5 h-3.5" />
                     {state.jobField}
                   </span>
-                  <span className="inline-flex items-center gap-1">
-                    <BarChart3 className="w-4 h-4" />
+                  <span className="inline-flex items-center gap-1.5 bg-secondary/70 text-secondary-foreground px-3 py-1 rounded-full text-sm font-medium">
+                    <BarChart3 className="w-3.5 h-3.5" />
                     {state.difficulty}
                   </span>
-                </p>
-                <p className="text-xs text-muted-foreground/70 font-mono">
+                </div>
+                <p className="text-xs text-muted-foreground/60 font-mono tracking-wide">
                   Session: {state.sessionId}
                 </p>
               </div>
@@ -143,24 +149,43 @@ const Interview = () => {
           </Card>
 
           {/* Main Content */}
-          <Card className="bg-card rounded-2xl p-8 shadow-lg border border-border/50 min-h-[400px] flex items-center justify-center">
+          <Card className="bg-card/80 backdrop-blur-sm rounded-2xl p-10 shadow-card border border-border/30 min-h-[420px] flex items-center justify-center">
             {/* Pre-start state */}
             {!isStarted && !isConnecting && (
-              <div className="text-center space-y-6 max-w-md">
-                <div className="bg-muted/50 rounded-xl p-6 text-left">
-                  <h3 className="font-semibold text-foreground mb-3">Before You Begin:</h3>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li>✓ Microphone connected and working</li>
-                    <li>✓ Quiet space with minimal noise</li>
-                    <li>✓ Speak clearly at normal pace</li>
-                    <li>✓ You'll answer 2 questions</li>
+              <div className="text-center space-y-8 max-w-sm w-full">
+                {/* Mic icon hero */}
+                <div className="flex justify-center">
+                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center animate-float">
+                    <Mic className="w-9 h-9 text-primary" />
+                  </div>
+                </div>
+
+                <div className="bg-accent/40 border border-accent-foreground/10 rounded-xl p-5 text-left space-y-3">
+                  <h3 className="font-semibold text-foreground text-sm uppercase tracking-wide">Before You Begin</h3>
+                  <ul className="space-y-2.5 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary mt-0.5">✓</span>
+                      Microphone connected and working
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary mt-0.5">✓</span>
+                      Quiet space with minimal noise
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary mt-0.5">✓</span>
+                      Speak clearly at a normal pace
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary mt-0.5">✓</span>
+                      Close any apps using your microphone (e.g. calls, video chat)
+                    </li>
                   </ul>
                 </div>
 
                 <Button
                   size="lg"
                   onClick={handleStartInterview}
-                  className="w-full py-6 text-lg"
+                  className="w-full py-6 text-lg gradient-warm text-primary-foreground shadow-warm hover:opacity-90 transition-opacity rounded-xl"
                 >
                   <Mic className="w-5 h-5 mr-2" />
                   Start Interview
@@ -168,7 +193,7 @@ const Interview = () => {
 
                 <button
                   onClick={() => navigate('/')}
-                  className="text-muted-foreground hover:text-foreground text-sm inline-flex items-center gap-1"
+                  className="text-muted-foreground hover:text-foreground text-sm inline-flex items-center gap-1.5 transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Back to home
@@ -178,49 +203,52 @@ const Interview = () => {
 
             {/* Connecting state */}
             {isConnecting && (
-              <div className="text-center space-y-4">
-                <div className="relative w-20 h-20 mx-auto">
+              <div className="text-center space-y-5">
+                <div className="relative w-24 h-24 mx-auto">
                   <div className="absolute inset-0 rounded-full border-4 border-muted"></div>
                   <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+                  <div className="absolute inset-3 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Mic className="w-6 h-6 text-primary animate-pulse-warm" />
+                  </div>
                 </div>
-                <h3 className="text-xl font-semibold text-foreground">Connecting...</h3>
-                <p className="text-muted-foreground">Preparing your interview</p>
+                <h3 className="text-xl font-semibold text-foreground font-serif">Connecting...</h3>
+                <p className="text-muted-foreground text-sm">Preparing your interview session</p>
               </div>
             )}
 
             {/* Active interview state */}
             {isStarted && (
               <div className="text-center space-y-6 w-full max-w-md">
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {/* Audio visualization placeholder */}
-                  <div className="flex items-center justify-center gap-1 h-16">
-                    {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                  <div className="flex items-center justify-center gap-1.5 h-20">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
                       <div
                         key={i}
-                        className="w-2 bg-primary rounded-full animate-pulse"
+                        className="w-1.5 bg-primary/80 rounded-full animate-pulse"
                         style={{
-                          height: `${Math.random() * 40 + 20}px`,
-                          animationDelay: `${i * 0.1}s`,
+                          height: `${Math.random() * 48 + 16}px`,
+                          animationDelay: `${i * 0.12}s`,
                         }}
                       />
                     ))}
                   </div>
 
-                  <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full">
+                  <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-5 py-2.5 rounded-full font-medium text-sm">
                     <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
                     Interview Active
                   </div>
 
-                  <p className="text-muted-foreground">🎤 Speak clearly</p>
+                  <p className="text-muted-foreground text-sm">🎤 Speak clearly — your interviewer is listening</p>
                 </div>
 
-                <div className="bg-muted/30 rounded-lg p-4">
+                <div className="bg-accent/30 border border-accent-foreground/10 rounded-xl p-4">
                   <p className="text-sm text-muted-foreground">
-                    💡 Tip: Take your time to think before answering
+                    💡 Take your time to think before answering each question
                   </p>
                 </div>
 
-                <Button variant="destructive" onClick={handleEndEarly}>
+                <Button variant="destructive" onClick={handleEndEarly} className="rounded-xl">
                   End Interview Early
                 </Button>
               </div>
