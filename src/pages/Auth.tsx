@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,17 @@ export default function Auth() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [signupSuccess, setSignupSuccess] = useState(false)
+
+  // Parse Supabase error params from URL hash (e.g. expired confirmation links)
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash.includes('error=')) {
+      const params = new URLSearchParams(hash.replace('#', ''))
+      const desc = params.get('error_description')
+      if (desc) setError(decodeURIComponent(desc.replace(/\+/g, ' ')))
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }, [])
 
   // Already logged in — send to the app
   if (!loading && user) {
