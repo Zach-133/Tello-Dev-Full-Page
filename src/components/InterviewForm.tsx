@@ -123,6 +123,7 @@ export function InterviewForm() {
             <SelectItem value="Architecture">Architecture</SelectItem>
             <SelectItem value="Business">Business</SelectItem>
             <SelectItem value="Artificial Intelligence">Artificial Intelligence</SelectItem>
+            <SelectItem value="AI Automation">AI Automation</SelectItem>
           </SelectContent>
         </Select>
       </div>
