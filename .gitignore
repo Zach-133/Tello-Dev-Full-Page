@@ -28,3 +28,15 @@ temporary screenshots/*.png
 temporary screenshots/*.jpg
 temporary screenshots/*.jpeg
 temporary screenshots/*.webp
+scripts/temporary-screenshots/**/*.png
+scripts/temporary-screenshots/**/*.jpg
+scripts/temporary-screenshots/**/*.jpeg
+scripts/temporary-screenshots/**/*.webp
+scripts/temporary-screenshots/*.png
+scripts/temporary-screenshots/*.jpg
+scripts/temporary-screenshots/*.jpeg
+scripts/temporary-screenshots/*.webp
+
+# Data exports (contain real session data)
+data/*.csv
+*.csv
