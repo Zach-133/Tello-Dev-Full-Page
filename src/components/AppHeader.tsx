@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { LogOut } from 'lucide-react'
+import { LogOut, LayoutDashboard } from 'lucide-react'
 
 export default function AppHeader() {
   const { user, signOut } = useAuth()
@@ -57,6 +57,16 @@ export default function AppHeader() {
               {user?.email ?? '—'}
             </p>
           </DropdownMenuLabel>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem
+            onClick={() => navigate('/dashboard')}
+            className="cursor-pointer font-sans gap-2"
+          >
+            <LayoutDashboard className="h-4 w-4" />
+            My Dashboard
+          </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 

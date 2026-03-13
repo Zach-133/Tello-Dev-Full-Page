@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Index from "./pages/Index";
 import Interview from "./pages/Interview";
 import Results from "./pages/Results";
+import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="/form" element={<Index />} />
               <Route path="/interview" element={<Interview />} />
               <Route path="/results/:sessionId" element={<Results />} />
+              <Route path="/dashboard" element={<Dashboard />} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
