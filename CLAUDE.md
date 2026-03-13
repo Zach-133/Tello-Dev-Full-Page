@@ -2,6 +2,12 @@
 
 ## Always Do First
 - **Invoke the `frontend-design` skill** before writing any frontend code, every session, no exceptions.
+- **Check `EARLY-ACCESS.md`** (project root) at the start of every session — it is the source of truth for Phase 4 launch progress.
+- **When a launch task is completed:** mark it `[x]` in `EARLY-ACCESS.md` AND update the corresponding item in the CLAUDE.md "Current Status" section below. Keep both files in sync.
+- **Check Notion at the start of every session** — fetch the two pages below and compare against `EARLY-ACCESS.md`. If Notion contains new tasks or updates not yet in local docs, add them to `EARLY-ACCESS.md`. **Never modify Notion — all changes go to local files only.**
+  - Technical Milestones: https://www.notion.so/86d6d8fd7f88828b807d0176092cbbbd
+  - Technical: Timeline: https://www.notion.so/3096d8fd7f88826da221018f6c4bcbfb
+- **Commit all changes to GitHub** after completing any task. Remote: `https://github.com/Zach-133/Tello-Early-Access.git` (branch: `main`). Push immediately after committing unless instructed otherwise.
 
 ---
 
@@ -193,6 +199,86 @@ Read PNG with the Read tool after each screenshot. Do at least 2 comparison roun
 | `tello-deployment` | `skills/tello-deployment/SKILL.md` | GitHub, Cloudflare Pages, deploying |
 | `frontend-design` | (global) | Any frontend UI work — invoke first every session |
 | `skill-creator` | `~/.claude/skills/skill-creator/` | Creating or improving skills |
+
+---
+
+## Current Status (Phase 4 — Preparation for Early Access)
+
+As of 7th March 2026, Phases 1–3 are complete. The product is live and functional end-to-end.
+
+**Detailed progress tracking: see `EARLY-ACCESS.md` (project root).** Keep both files in sync when marking tasks complete.
+
+### What's working
+- Full interview flow: form → EL voice interview → grading → results
+- Supabase auth connected to form
+- WF0 retrieves questions at **start of conversation** (~2s latency), massively reducing EL prompt complexity
+- QA workflow (WF4) measuring 3 delay metrics
+- Error workflow (WF5) with Telegram alerts on all 5 workflows
+- 5 EL evaluation criteria linked to Sheets
+- Results page error/timeout state fully implemented
+
+### Outstanding Phase 4 tasks
+**ElevenLabs:**
+- [ ] Manually stress-test Ivy across all durations + job fields; log and fix issues
+- [ ] Add unique personality to Ivy
+- [ ] Limit token usage / call duration guardrail (`src/pages/Interview.tsx`)
+- [ ] Back up Ivy's system prompt to `skills/tello-elevenlabs/ivy-system-prompt.md`
+- [x] Fix "waiting for bye" bug — agent now self-terminates
+
+**n8n:**
+- [ ] Export all 6 WFs to `n8n-backups/` (prerequisite for n8n MCP + version update)
+- [ ] Update n8n to latest version (after backups committed)
+- [ ] Build WF6 — Waitlist submission (email + timestamp → Sheets + Telegram)
+- [ ] Build WF7 — Invite email sender (manual trigger → sends invite link)
+- [ ] Update Intermediate and Advanced agents once Ivy is stable
+
+**Frontend:**
+- [ ] Security audit — full run via CC (credentials, env vars, webhook URLs, auth flows)
+- [ ] Show error page when interview fails (instead of blank/incorrect grading) (`src/pages/Results.tsx`)
+- [x] Add `.mcp.json` + `.claude/settings.local.json` to `.gitignore` (confirmed never committed)
+- [ ] Auth gating: invite token flow (`src/pages/Auth.tsx`)
+- [ ] WaitlistSection: POST email to WF6 webhook (`src/components/landing/WaitlistSection.tsx`)
+- [ ] Add legal / privacy policy pages (`/privacy`, `/terms`)
+- [ ] Buy domain: **tellointerview.ai** (£70/year) — currently live at tello.zach13.com
+- [ ] Redesign early access landing page — on `redesign/landing` branch
+- [ ] Add onboarding tips on the form page (`/form`)
+- [ ] In-app feedback section on Results page (incentive: free 1-month access)
+- [ ] User dashboard: session history + score stats per user
+- [ ] Pricing research: figure out inbound/outbound costs, break-even calculation
+
+### Early Access offer (when launched)
+Free 1-month PRO access for founding members who complete x interviews and provide reviews/feedback.
+
+---
+
+## PRO Features (Phase 5 — future, not being built yet)
+
+1. **CV upload** — EL personalises interview based on user's CV
+2. **Job description upload** — tailor questions to the specific role
+3. **Company research** — Glassdoor data (expected questions, culture), company background
+4. **Progress tracker** — line graph of 4 criteria scores + final score over time, daily streak counter
+5. **Training ground** — practice individual questions, instant feedback; optionally a daily challenge
+6. **Certificates** — awarded to users scoring >90% for each difficulty level (incentive)
+
+---
+
+## Scoring System
+
+**4 criteria, weighted average → final score (0–100):**
+| Criterion | Weight | n8n field |
+|-----------|--------|-----------|
+| Technical Knowledge | 30% | `technicalKnowledge` |
+| Problem Solving | 40% | `problemSolving` |
+| Communication & Structure | 15% | `communicationSkills` |
+| Relevance & Depth | 15% | `relevance` |
+
+**Score bands:** `"1"` · `"2-4"` · `"5-7"` · `"8-10"`
+
+**Performance ratings (Results.tsx):**
+- ≥ 90 → Excellent
+- ≥ 70 → Good
+- ≥ 50 → Fair
+- < 50 → Needs Improvement
 
 ---
 
