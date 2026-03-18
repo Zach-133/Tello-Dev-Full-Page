@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import AppHeader from "@/components/AppHeader";
 import { InterviewForm } from "@/components/InterviewForm";
 import { Card } from "@/components/ui/card";
-import { Flame, Target, TrendingUp, Trophy, Loader2 } from "lucide-react";
+import {
+  Flame, Target, TrendingUp, Trophy, Loader2, Sparkles,
+} from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer,
@@ -57,13 +59,11 @@ const buildChartData = (sessions: Session[], mode: ChartMode) => {
     label: String(i + 1),
     date: formatDateLabel(s.date),
     "Overall Score": s.finalScore,
-    // Bridge point: only on the last actual session so the dashed projection connects from it
     "Your Potential": mode === "overall" && i === sessions.length - 1 ? s.finalScore : null,
-    // Tiny Y-offsets (≤1 pt on 0-100 scale) so lines stay distinguishable when values are identical
-    "Technical":          Math.round(s.technicalKnowledge * 10),
-    "Problem-Solving":    Math.round(s.problemSolving * 10) + 0.5,
-    "Communication":      Math.round(s.communicationSkills * 10) - 0.5,
-    "Relevance":          Math.round(s.relevance * 10) + 1,
+    "Technical":       Math.round(s.technicalKnowledge * 10),
+    "Problem-Solving": Math.round(s.problemSolving * 10) + 0.5,
+    "Communication":   Math.round(s.communicationSkills * 10) - 0.5,
+    "Relevance":       Math.round(s.relevance * 10) + 1,
   }));
 
   if (mode === "breakdown") return actual;
@@ -71,8 +71,6 @@ const buildChartData = (sessions: Session[], mode: ChartMode) => {
   const lastScore = sessions[sessions.length - 1].finalScore;
   const targetScore = Math.min(Math.max(lastScore + 25, 80), 98);
   const range = targetScore - lastScore;
-
-  // Projection always rises from lastScore: surge, spike, pullback, target
   const offsets = [0.18, 0.50, 0.65, 1.0];
   const nudges = [+3, +8, -5, 0];
 
@@ -81,16 +79,13 @@ const buildChartData = (sessions: Session[], mode: ChartMode) => {
     date: null,
     "Overall Score": null,
     "Your Potential": Math.round(lastScore + range * t + nudges[i]),
-    "Technical": null,
-    "Problem-Solving": null,
-    "Communication": null,
-    "Relevance": null,
+    "Technical": null, "Problem-Solving": null,
+    "Communication": null, "Relevance": null,
   }));
 
   return [...actual, ...projected];
 };
 
-// Custom tooltip — filters out _bg halo lines so they never appear in the tooltip
 const TooltipContent = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload?.date;
@@ -131,12 +126,114 @@ const StatCard = ({ icon, bg, value, label, sub, pulse }: StatCardProps) => (
   </Card>
 );
 
+// ── Mode Toggle Pill ─────────────────────────────────────────────────────────
+
+interface ModePillProps {
+  proOpen: boolean;
+  setProOpen: (v: boolean) => void;
+}
+
+const ModePill = ({ proOpen, setProOpen }: ModePillProps) => {
+  const stdRef = useRef<HTMLButtonElement>(null);
+  const proRef = useRef<HTMLButtonElement>(null);
+  const [ind, setInd] = useState({ left: 2, width: 0 });
+
+  useLayoutEffect(() => {
+    const btn = proOpen ? proRef.current : stdRef.current;
+    if (btn) setInd({ left: btn.offsetLeft, width: btn.offsetWidth });
+  }, [proOpen]);
+
+  return (
+    <div
+      className="relative inline-flex items-center p-0.5 rounded-full flex-shrink-0"
+      style={{ background: "hsl(30,20%,91%)" }}
+    >
+      {/* Sliding brown indicator — tracks each button's exact position + width */}
+      <div
+        className="absolute inset-y-0.5 rounded-full pointer-events-none"
+        style={{
+          left: ind.left,
+          width: ind.width,
+          background: "linear-gradient(135deg, hsl(22,52%,22%) 0%, hsl(18,55%,16%) 100%)",
+          boxShadow: "0 2px 10px -2px hsl(22,52%,20%,0.55), 0 0 18px -4px hsl(22,52%,20%,0.35)",
+          transition: "left 240ms cubic-bezier(0.33,1,0.68,1), width 240ms cubic-bezier(0.33,1,0.68,1)",
+        }}
+      />
+      <button
+        ref={stdRef}
+        type="button"
+        onClick={() => setProOpen(false)}
+        className="relative z-10 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
+        style={{ color: !proOpen ? "hsl(30,30%,92%)" : "hsl(25,15%,50%)", transition: "color 240ms ease" }}
+      >
+        Standard
+      </button>
+      <button
+        ref={proRef}
+        type="button"
+        onClick={() => setProOpen(true)}
+        className="relative z-10 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 whitespace-nowrap"
+        style={{ color: proOpen ? "hsl(30,30%,92%)" : "hsl(25,15%,50%)", transition: "color 240ms ease" }}
+      >
+        <Sparkles className="w-3 h-3" />
+        PRO <span style={{ fontSize: "11px", opacity: 0.85 }}>(unlocked)</span>
+      </button>
+    </div>
+  );
+};
+
+// ── Shared card glow style ───────────────────────────────────────────────────
+
+const getCardStyle = (proOpen: boolean): React.CSSProperties => ({
+  border: proOpen
+    ? "1.5px solid hsl(22,52%,20%,0.32)"
+    : "1.5px solid hsl(18,75%,65%,0.35)",
+  boxShadow: proOpen
+    ? "0 0 0 1px hsl(22,52%,20%,0.16), 0 0 28px -2px hsl(22,52%,20%,0.14), 0 8px 30px -6px hsl(25,30%,15%,0.10)"
+    : "0 0 0 1.5px hsl(18,75%,65%,0.45), 0 0 32px -2px hsl(18,75%,65%,0.30), 0 8px 30px -6px hsl(25,30%,15%,0.10)",
+  transition: "border 300ms ease, box-shadow 300ms ease",
+});
+
+// ── Shared card header (title + pill on right) ───────────────────────────────
+
+interface CardHeaderProps {
+  proOpen: boolean;
+  setProOpen: (v: boolean) => void;
+  subtitle: string;
+}
+
+const FormCardHeader = ({ proOpen, setProOpen, subtitle }: CardHeaderProps) => (
+  <div className="flex items-start justify-between mb-4">
+    <div>
+      <h2 className="text-xl font-bold text-foreground font-serif">
+        {proOpen ? (
+          <>
+            New Mock Interview{" "}
+            <span style={{ fontWeight: 800, color: "hsl(22,52%,20%)" }}>PRO</span>
+          </>
+        ) : (
+          "New Mock Interview"
+        )}
+      </h2>
+      <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+    </div>
+    <ModePill proOpen={proOpen} setProOpen={setProOpen} />
+  </div>
+);
+
+// ── Main Page ────────────────────────────────────────────────────────────────
+
 const Index = () => {
   const { user } = useAuth();
   const [status, setStatus] = useState<"loading" | "loaded" | "empty">("loading");
   const [data, setData] = useState<DashboardData | null>(null);
   const [chartMode, setChartMode] = useState<ChartMode>("overall");
   const [animationDone, setAnimationDone] = useState(false);
+
+  // PRO features state — lifted here so InterviewForm can read on submit
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [jobDescLink, setJobDescLink] = useState("");
+  const [proOpen, setProOpen] = useState(false);
 
   const firstName =
     user?.user_metadata?.full_name?.split(" ")[0] ||
@@ -147,6 +244,26 @@ const Index = () => {
     const fetchDashboard = async () => {
       const email = user?.email;
       if (!email) { setStatus("empty"); return; }
+
+      const cacheKey = `tello_dashboard_${email}`;
+      const isStale = sessionStorage.getItem("tello_dashboard_stale") === "true";
+      const cached = sessionStorage.getItem(cacheKey);
+
+      if (cached && !isStale) {
+        try {
+          const json: DashboardData = JSON.parse(cached);
+          if (!json.sessions || json.sessions.length === 0) {
+            setStatus("empty");
+          } else {
+            setData(json);
+            setStatus("loaded");
+          }
+          return;
+        } catch {
+          // corrupted cache — fall through to fetch
+        }
+      }
+
       try {
         const res = await fetch(DASHBOARD_WEBHOOK, {
           method: "POST",
@@ -155,13 +272,16 @@ const Index = () => {
         });
         if (!res.ok) throw new Error();
         const json: DashboardData = await res.json();
+        sessionStorage.setItem(cacheKey, JSON.stringify(json));
+        sessionStorage.removeItem("tello_dashboard_stale");
         if (!json.sessions || json.sessions.length === 0) {
           setStatus("empty");
         } else {
           setData(json);
           setStatus("loaded");
         }
-      } catch {
+      } catch (err) {
+        console.error("[Dashboard] WF8 fetch failed:", err);
         setStatus("empty");
       }
     };
@@ -176,7 +296,7 @@ const Index = () => {
     <div className="min-h-screen gradient-hero">
       <AppHeader />
 
-      <div className="container mx-auto px-4 pt-6 pb-4 max-w-6xl">
+      <div className="container mx-auto px-4 pt-6 pb-4 max-w-7xl">
 
         {/* Welcome */}
         <div className="mb-5">
@@ -196,24 +316,32 @@ const Index = () => {
           </div>
         )}
 
-        {/* Empty — new user */}
+        {/* ── Empty state — single form card, widens when PRO opens ── */}
         {status === "empty" && (
-          <div className="max-w-md">
-            <Card className="bg-card rounded-2xl p-8 shadow-card border border-border/50">
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-foreground font-serif">
-                  Start Your First Interview
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Set up your session below to get started
-                </p>
-              </div>
-              <InterviewForm />
+          <div
+            style={{
+              width: proOpen ? "580px" : "320px",
+              transition: "width 320ms cubic-bezier(0.33, 1, 0.68, 1)",
+            }}
+          >
+            <Card className="bg-card rounded-2xl p-6" style={{ ...getCardStyle(proOpen), minHeight: "420px" }}>
+              <FormCardHeader
+                proOpen={proOpen}
+                setProOpen={setProOpen}
+                subtitle="Configure and start your first session"
+              />
+              <InterviewForm
+                cvFile={cvFile}
+                jobDescLink={jobDescLink}
+                proOpen={proOpen}
+                setCvFile={setCvFile}
+                setJobDescLink={setJobDescLink}
+              />
             </Card>
           </div>
         )}
 
-        {/* Loaded */}
+        {/* ── Loaded state — full dashboard ── */}
         {status === "loaded" && stats && (
           <div className="space-y-3 animate-fade-in">
 
@@ -247,21 +375,26 @@ const Index = () => {
               />
             </div>
 
-            {/* Chart + Form */}
-            <div className="grid lg:grid-cols-5 gap-3">
+            {/* Chart + Form — chart compresses when PRO opens, form expands */}
+            <div className="flex items-stretch gap-3">
 
-              {/* Chart */}
-              <Card className="lg:col-span-3 bg-card rounded-2xl shadow-card border border-border/50 p-5 flex flex-col">
+              {/* Chart — shrinks when PRO open */}
+              <Card
+                className="bg-card rounded-2xl shadow-card border border-border/50 p-5 flex flex-col min-w-0"
+                style={{
+                  flex: proOpen ? "2 2 0" : "3 3 0",
+                  transition: "flex 320ms cubic-bezier(0.33,1,0.68,1)",
+                  minHeight: "420px",
+                }}
+              >
                 <div className="flex items-start justify-between mb-1 flex-shrink-0">
                   <div>
                     <h2 className="text-xl font-bold text-foreground font-serif">
                       Your Performance
                     </h2>
-                    {chartMode === "overall" ? (
-                      <p className="text-xs text-muted-foreground mt-0.5">Overall score</p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground mt-0.5">Score breakdown across all 4 criteria.</p>
-                    )}
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {chartMode === "overall" ? "Overall score" : "Score breakdown across all 4 criteria."}
+                    </p>
                   </div>
 
                   <div className="flex items-center gap-1 bg-secondary rounded-xl p-1">
@@ -289,7 +422,6 @@ const Index = () => {
                 </div>
 
                 <div className="flex-1 min-h-0 relative">
-                  {/* Breakdown legend overlay — absolutely positioned inside chart, doesn't affect layout */}
                   {chartMode === "breakdown" && (
                     <div className="absolute top-2 left-10 z-10 flex flex-col gap-1.5 bg-card/85 backdrop-blur-sm rounded-xl px-2.5 py-2 border border-border/40 shadow-soft">
                       {[
@@ -329,29 +461,17 @@ const Index = () => {
                       {chartMode === "overall" ? (
                         <>
                           <Line
-                            type="monotone"
-                            dataKey="Overall Score"
-                            stroke="#E08060"
-                            strokeWidth={2.5}
+                            type="monotone" dataKey="Overall Score" stroke="#E08060" strokeWidth={2.5}
                             dot={{ r: 3.5, fill: "#E08060", strokeWidth: 0 }}
-                            activeDot={{ r: 5, strokeWidth: 0 }}
-                            connectNulls={false}
-                            isAnimationActive={!animationDone}
-                            animationDuration={700}
+                            activeDot={{ r: 5, strokeWidth: 0 }} connectNulls={false}
+                            isAnimationActive={!animationDone} animationDuration={700}
                             onAnimationEnd={() => setAnimationDone(true)}
                           />
                           <Line
-                            type="monotone"
-                            dataKey="Your Potential"
-                            stroke="#E08060"
-                            strokeWidth={2}
-                            strokeDasharray="6 4"
-                            strokeOpacity={0.55}
-                            dot={false}
-                            activeDot={false}
-                            connectNulls={true}
-                            isAnimationActive={!animationDone}
-                            animationDuration={700}
+                            type="monotone" dataKey="Your Potential" stroke="#E08060" strokeWidth={2}
+                            strokeDasharray="6 4" strokeOpacity={0.55}
+                            dot={false} activeDot={false} connectNulls={true}
+                            isAnimationActive={!animationDone} animationDuration={700}
                           />
                         </>
                       ) : (
@@ -367,23 +487,29 @@ const Index = () => {
                 </div>
               </Card>
 
-              {/* Form — glowing coral border */}
-              <Card
-                className="lg:col-span-2 bg-card rounded-2xl border border-coral/30 p-6"
+              {/* Form — expands when PRO open */}
+              <div
+                className="min-w-0"
                 style={{
-                  boxShadow: "0 0 0 1.5px hsl(18, 75%, 65%, 0.45), 0 0 32px -2px hsl(18, 75%, 65%, 0.30), 0 8px 30px -6px hsl(25, 30%, 15%, 0.10)",
+                  flex: proOpen ? "3 3 0" : "2 2 0",
+                  transition: "flex 320ms cubic-bezier(0.33,1,0.68,1)",
                 }}
               >
-                <div className="mb-4">
-                  <h2 className="text-xl font-bold text-foreground font-serif">
-                    New Mock Interview
-                  </h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Configure and start your next session
-                  </p>
-                </div>
-                <InterviewForm />
-              </Card>
+                <Card className="bg-card rounded-2xl p-6 h-full" style={getCardStyle(proOpen)}>
+                  <FormCardHeader
+                    proOpen={proOpen}
+                    setProOpen={setProOpen}
+                    subtitle="Configure and start your next session"
+                  />
+                  <InterviewForm
+                    cvFile={cvFile}
+                    jobDescLink={jobDescLink}
+                    proOpen={proOpen}
+                    setCvFile={setCvFile}
+                    setJobDescLink={setJobDescLink}
+                  />
+                </Card>
+              </div>
 
             </div>
           </div>

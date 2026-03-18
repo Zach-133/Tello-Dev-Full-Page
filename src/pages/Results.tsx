@@ -60,7 +60,8 @@ const Results = () => {
         console.log('Poll #' + (pollCount + 1), data);
 
         if (data.status === 'completed') {
-          // Results are ready!
+          // Results are ready! Mark dashboard cache stale so next /form visit refetches
+          sessionStorage.setItem('tello_dashboard_stale', 'true');
           setResults(data);
           setStatus('completed');
         } else if (data.status === 'processing') {

@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import Interview from "./pages/Interview";
 import Results from "./pages/Results";
 import Dashboard from "./pages/Dashboard";
+import Feedback from "./pages/Feedback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/interview" element={<Interview />} />
               <Route path="/results/:sessionId" element={<Results />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/feedback" element={<Feedback />} />
             </Route>
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
