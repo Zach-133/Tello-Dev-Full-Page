@@ -12,6 +12,8 @@ interface InterviewState {
   duration: string;
   jobField: string;
   difficulty: string;
+  cvExists: boolean;
+  jdExists: boolean;
 }
 
 const Interview = () => {
@@ -80,15 +82,22 @@ const Interview = () => {
       }
 
       // Start conversation with difficulty-specific agent
-      // @ts-expect-error - agentId with dynamicVariables is supported but types may be outdated
+      console.log('[EL] dynamicVariables:', {
+        cv_exists: String(state.cvExists ?? false),
+        jd_exists: String(state.jdExists ?? false),
+        session_id: state.sessionId,
+      });
       await conversation.startSession({
         agentId: selectedAgentId,
+        connectionType: "webrtc",
         dynamicVariables: {
           user_name: state.name,
           job_field: state.jobField,
           difficulty: state.difficulty,
           duration: String(state.duration),
-          session_id: state.sessionId
+          session_id: state.sessionId,
+          cv_exists: String(state.cvExists ?? false),
+          jd_exists: String(state.jdExists ?? false)
         }
       });
 
