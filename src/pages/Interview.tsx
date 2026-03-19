@@ -243,7 +243,7 @@ const Interview = () => {
                         style={{
                           height: `${Math.max(4, height * 64)}px`,
                           opacity: 0.35 + height * 0.65,
-                          transition: 'height 50ms ease-out, opacity 50ms ease-out',
+                          transition: 'height 30ms ease-out, opacity 30ms ease-out',
                         }}
                       />
                     ))}
