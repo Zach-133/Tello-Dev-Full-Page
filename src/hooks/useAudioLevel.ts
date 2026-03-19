@@ -2,16 +2,17 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 interface UseAudioLevelOptions {
   barCount?: number;
-  /** Volume below this (0–1) is considered "too soft". Default: 0.08 */
+  /** Volume below this (0–1) is considered "too soft". Default: 0.04 */
   silenceThreshold?: number;
-  /** Seconds after isActive=true before "too soft" warnings can fire. Default: 20 */
+  /** Seconds after isActive=true before "too soft" warnings can fire. Default: 30 */
   initialDelaySeconds?: number;
-  /** Consecutive seconds below threshold before isTooSoft becomes true. Default: 5 */
+  /** Consecutive seconds below threshold before isTooSoft becomes true. Default: 10 */
   sustainedSilenceSeconds?: number;
 }
 
 interface UseAudioLevelReturn {
-  barHeights: number[];  // array of barCount values, each 0–1
+  barHeights: number[];  // array of barCount values, each 0–1 (blends real amp + sine baseline)
+  volume: number;        // 0–1 scaled level for VU meter (0.5 ≈ comfortable speaking level)
   isTooSoft: boolean;
 }
 
@@ -19,12 +20,13 @@ export function useAudioLevel(
   isActive: boolean,
   {
     barCount = 9,
-    silenceThreshold = 0.08,
-    initialDelaySeconds = 20,
-    sustainedSilenceSeconds = 5,
+    silenceThreshold = 0.04,
+    initialDelaySeconds = 30,
+    sustainedSilenceSeconds = 10,
   }: UseAudioLevelOptions = {}
 ): UseAudioLevelReturn {
   const [barHeights, setBarHeights] = useState<number[]>(() => Array(barCount).fill(0));
+  const [volume, setVolume] = useState(0);
   const [isTooSoft, setIsTooSoft] = useState(false);
 
   const rafIdRef        = useRef<number | null>(null);
@@ -58,6 +60,7 @@ export function useAudioLevel(
     if (!isActive) {
       cleanup();
       setBarHeights(Array(barCount).fill(0));
+      setVolume(0);
       setIsTooSoft(false);
       return;
     }
@@ -89,30 +92,37 @@ export function useAudioLevel(
           analyser.getByteFrequencyData(dataArrayRef.current!);
           const data = dataArrayRef.current!;
 
-          // Per-bar heights: divide frequency bins into barCount groups
+          // Per-bar heights: real amplitude blended with sine-wave baseline so bars
+          // always move even during silence, keeping users visually engaged.
+          const t = performance.now() / 1000;
           const binsPerBar = Math.floor(bufferLength / barCount);
           const heights: number[] = [];
           for (let b = 0; b < barCount; b++) {
             let sum = 0;
             const start = b * binsPerBar;
             for (let k = start; k < start + binsPerBar; k++) sum += data[k];
-            heights.push((sum / binsPerBar) / 255);
+            const realAmp = (sum / binsPerBar) / 255;
+            // Gentle sine baseline (0–0.20): each bar phase-shifted for a wave effect
+            const sineBase = ((Math.sin(t * 1.8 + b * 0.8) + 1) / 2) * 0.20;
+            heights.push(Math.max(sineBase, realAmp));
           }
           setBarHeights(heights);
 
-          // Overall volume (mean across all bins)
+          // Overall volume: mean of all bins, scaled so ~0.5 = comfortable speech
           let total = 0;
           for (let i = 0; i < bufferLength; i++) total += data[i];
-          const overallVolume = total / bufferLength / 255;
+          const rawVolume = total / bufferLength / 255;
+          const scaledVolume = Math.min(1, rawVolume * 6);
+          setVolume(scaledVolume);
 
-          // "Too soft" logic — only fires after initial delay
+          // "Too soft" logic — uses raw (unscaled) volume, only after initial delay
           const now = performance.now();
           const pastInitialDelay =
             activeSinceRef.current !== null &&
             now - activeSinceRef.current >= initialDelaySeconds * 1000;
 
           if (pastInitialDelay) {
-            if (overallVolume < silenceThreshold) {
+            if (rawVolume < silenceThreshold) {
               if (silenceSinceRef.current === null) {
                 silenceSinceRef.current = now;
               } else if (now - silenceSinceRef.current >= sustainedSilenceSeconds * 1000) {
@@ -131,7 +141,6 @@ export function useAudioLevel(
       } catch {
         // getUserMedia failed — fail silently.
         // Interview.tsx already handles permission errors during EL startup.
-        // barHeights stay at zero, rendering as minimal-height bars.
       }
     };
 
@@ -141,9 +150,10 @@ export function useAudioLevel(
       cancelled = true;
       cleanup();
       setBarHeights(Array(barCount).fill(0));
+      setVolume(0);
       setIsTooSoft(false);
     };
   }, [isActive, barCount, silenceThreshold, initialDelaySeconds, sustainedSilenceSeconds, cleanup]);
 
-  return { barHeights, isTooSoft };
+  return { barHeights, volume, isTooSoft };
 }

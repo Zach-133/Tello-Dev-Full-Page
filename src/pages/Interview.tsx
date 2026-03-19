@@ -22,7 +22,7 @@ const Interview = () => {
   const navigate = useNavigate();
   const [isStarted, setIsStarted] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const { barHeights, isTooSoft } = useAudioLevel(isStarted);
+  const { barHeights, volume, isTooSoft } = useAudioLevel(isStarted);
 
   const state = location.state as InterviewState | null;
 
@@ -234,7 +234,7 @@ const Interview = () => {
             {isStarted && (
               <div className="text-center space-y-6 w-full max-w-md">
                 <div className="space-y-5">
-                  {/* Live audio visualizer — bars driven by real microphone amplitude */}
+                  {/* Live audio visualizer — always animated, amplitude-modulated */}
                   <div className="flex items-end justify-center gap-1.5 h-20">
                     {barHeights.map((height, i) => (
                       <div
@@ -247,6 +247,30 @@ const Interview = () => {
                         }}
                       />
                     ))}
+                  </div>
+
+                  {/* Segmented mic level VU meter */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-center gap-1">
+                      {Array.from({ length: 12 }, (_, i) => {
+                        const litCount = Math.round(volume * 12);
+                        const isLit = i < litCount;
+                        return (
+                          <div
+                            key={i}
+                            className={`w-2.5 h-2.5 rounded-sm ${isLit ? 'bg-coral' : 'bg-muted/40'}`}
+                            style={{
+                              opacity: isLit ? 0.4 + (i / 12) * 0.6 : 0.25,
+                              transition: 'opacity 80ms ease-out',
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="flex justify-between px-0.5">
+                      <span className="text-xs text-muted-foreground/50">Soft</span>
+                      <span className="text-xs text-muted-foreground/50">Loud</span>
+                    </div>
                   </div>
 
                   <div className="inline-flex items-center gap-2 bg-coral/10 text-coral-dark px-5 py-2.5 rounded-full font-medium text-sm">
