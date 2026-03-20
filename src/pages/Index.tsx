@@ -33,6 +33,7 @@ interface DashboardStats {
 interface DashboardData {
   sessions: Session[];
   stats: DashboardStats;
+  credits_remaining?: number;
 }
 
 type ChartMode = "overall" | "breakdown";
@@ -200,26 +201,40 @@ interface CardHeaderProps {
   proOpen: boolean;
   setProOpen: (v: boolean) => void;
   subtitle: string;
+  creditsRemaining?: number | null;
 }
 
-const FormCardHeader = ({ proOpen, setProOpen, subtitle }: CardHeaderProps) => (
-  <div className="flex items-start justify-between mb-4">
-    <div>
-      <h2 className="text-xl font-bold text-foreground font-serif">
-        {proOpen ? (
-          <>
-            New Mock Interview{" "}
-            <span style={{ fontWeight: 800, color: "hsl(22,52%,20%)" }}>PRO</span>
-          </>
-        ) : (
-          "New Mock Interview"
+const FormCardHeader = ({ proOpen, setProOpen, subtitle, creditsRemaining }: CardHeaderProps) => {
+  const creditColor =
+    creditsRemaining === null || creditsRemaining === undefined ? "hsl(160,45%,38%)"
+    : creditsRemaining < 5  ? "hsl(0,65%,50%)"
+    : creditsRemaining < 15 ? "hsl(38,85%,42%)"
+    : "hsl(160,45%,38%)";
+
+  return (
+    <div className="flex items-start justify-between mb-4">
+      <div>
+        <h2 className="text-xl font-bold text-foreground font-serif">
+          {proOpen ? (
+            <>
+              New Mock Interview{" "}
+              <span style={{ fontWeight: 800, color: "hsl(22,52%,20%)" }}>PRO</span>
+            </>
+          ) : (
+            "New Mock Interview"
+          )}
+        </h2>
+        <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+        {creditsRemaining !== null && creditsRemaining !== undefined && (
+          <p className="text-xs font-medium mt-1" style={{ color: creditColor }}>
+            {creditsRemaining.toFixed(1)} min remaining
+          </p>
         )}
-      </h2>
-      <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+      </div>
+      <ModePill proOpen={proOpen} setProOpen={setProOpen} />
     </div>
-    <ModePill proOpen={proOpen} setProOpen={setProOpen} />
-  </div>
-);
+  );
+};
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 
@@ -234,6 +249,7 @@ const Index = () => {
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [jobDescLink, setJobDescLink] = useState("");
   const [proOpen, setProOpen] = useState(false);
+  const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
 
   const firstName =
     user?.user_metadata?.full_name?.split(" ")[0] ||
@@ -252,6 +268,7 @@ const Index = () => {
       if (cached && !isStale) {
         try {
           const json: DashboardData = JSON.parse(cached);
+          if (typeof json.credits_remaining === "number") setCreditsRemaining(json.credits_remaining);
           if (!json.sessions || json.sessions.length === 0) {
             setStatus("empty");
           } else {
@@ -268,10 +285,11 @@ const Index = () => {
         const res = await fetch(DASHBOARD_WEBHOOK, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
+          body: JSON.stringify({ email, userId: user?.id }),
         });
         if (!res.ok) throw new Error();
         const json: DashboardData = await res.json();
+        if (typeof json.credits_remaining === "number") setCreditsRemaining(json.credits_remaining);
         sessionStorage.setItem(cacheKey, JSON.stringify(json));
         sessionStorage.removeItem("tello_dashboard_stale");
         if (!json.sessions || json.sessions.length === 0) {
@@ -329,6 +347,7 @@ const Index = () => {
                 proOpen={proOpen}
                 setProOpen={setProOpen}
                 subtitle="Configure and start your first session"
+                creditsRemaining={creditsRemaining}
               />
               <InterviewForm
                 cvFile={cvFile}
@@ -500,6 +519,7 @@ const Index = () => {
                     proOpen={proOpen}
                     setProOpen={setProOpen}
                     subtitle="Configure and start your next session"
+                    creditsRemaining={creditsRemaining}
                   />
                   <InterviewForm
                     cvFile={cvFile}

@@ -121,6 +121,8 @@ export function InterviewForm({
       const cvExists = !!(proOpen && cvFile);
       const jdExists = !!(proOpen && (jobDescLink ?? "").trim().length > 0);
 
+      const userId = user?.id || "";
+
       if (cvExists) {
         const fd = new FormData();
         fd.append("duration", formData.duration);
@@ -128,6 +130,7 @@ export function InterviewForm({
         fd.append("difficulty", formData.difficulty);
         fd.append("name", name);
         fd.append("email", email);
+        fd.append("userId", userId);
         fd.append("cvExists", "True");
         fd.append("cv", cvFile!, cvFile!.name);
         fd.append("jdExists", jdExists ? "True" : "False");
@@ -141,6 +144,7 @@ export function InterviewForm({
             ...formData,
             name,
             email,
+            userId,
             cvExists: "False",
             jdExists: jdExists ? "True" : "False",
             jd: (jobDescLink ?? "").trim(),
@@ -148,6 +152,13 @@ export function InterviewForm({
         });
       }
 
+      if (response.status === 403) {
+        const data = await response.json();
+        if (data.error === "insufficient_credits") {
+          setError("You don't have enough credits remaining to start an interview.");
+          return;
+        }
+      }
       if (!response.ok) throw new Error("Webhook request failed");
 
       const data = await response.json();
